@@ -6,7 +6,7 @@ authors = ["PurpleMyst <PurpleMyst@users.noreply.github.com>"]
 license = "ISC"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.9"
 pypdf = {extras = ["image"], version = "^3.2.0"}
 argh = "^0.26.2"
 rich = "^13.0.0"

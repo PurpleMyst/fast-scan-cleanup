@@ -3,6 +3,7 @@ from functools import partial
 from pathlib import Path
 from shutil import which
 from subprocess import run
+from sys import exit, version_info
 from tempfile import TemporaryDirectory
 
 from argh import dispatch_command
@@ -13,10 +14,13 @@ from rich.markup import escape
 console = Console()
 run = partial(run, capture_output=True, check=True)
 
+if version_info >= (3, 10):
+    TemporaryDirectory = partial(TemporaryDirectory, ignore_cleanup_errors=True)
 
-def worker(src: Path, *, language: str) -> Path:
-    if which("unpaper"):
-        console.log(f"Found [b]unpaper[/], unpaper-ing [i]{escape(str(src))}")
+
+def worker(src: Path, *, language: str, unpaper: bool) -> Path:
+    if unpaper:
+        console.log(f"Unpaper-ing [i]{escape(str(src))}")
         unpapered = src.with_suffix(".unpaper.ppm")
         run(("unpaper", src, unpapered))
         src = unpapered
@@ -26,15 +30,20 @@ def worker(src: Path, *, language: str) -> Path:
     return src.with_suffix(".ocr.pdf")
 
 
-def main(*, input: str = "input.pdf", output: str = "output.pdf", language: str) -> None:
+def main(
+    *, input: str = "input.pdf", output: str = "output.pdf", language: str, unpaper: bool = False
+) -> None:
     "Unpaper & tesseract all the things!"
-    if not which("unpaper"):
-        console.log("[b]unpaper not found[/], will not be ran")
+    if unpaper and which("unpaper") is None:
+        console.log("[b]unpaper not found[/]!")
+        exit(1)
     console.log("Converting PDF to PPM")
-    with TemporaryDirectory(ignore_cleanup_errors=True) as tmpdir, ProcessPoolExecutor() as pool:
+    with TemporaryDirectory() as tmpdir, ProcessPoolExecutor() as pool:
         tmpdir = Path(tmpdir)
-        run(("pdftoppm", input, tmpdir / "page"), check=True)
-        processed = pool.map(partial(worker, language=language), tmpdir.glob("*.ppm"))
+        run(("pdftoppm", input, tmpdir / "page"))
+        processed = pool.map(
+            partial(worker, language=language, unpaper=unpaper), tmpdir.glob("*.ppm")
+        )
         merger = PdfMerger()
         console.log("Merging pages")
         for page in processed:
