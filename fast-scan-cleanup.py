@@ -30,6 +30,10 @@ def worker(src: Path, *, language: str, unpaper: bool) -> Path:
     return src.with_suffix(".ocr.pdf")
 
 
+def parse_page_number(s: str) -> int:
+    return int(s[s.rindex("page") + len("page") :].removesuffix(".pdf"))
+
+
 def main(
     *, input: str = "input.pdf", output: str = "output.pdf", language: str, unpaper: bool = False
 ) -> None:
@@ -42,7 +46,8 @@ def main(
         tmpdir = Path(tmpdir)
         run(("pdftoppm", input, tmpdir / "page"))
         processed = pool.map(
-            partial(worker, language=language, unpaper=unpaper), tmpdir.glob("*.ppm")
+            partial(worker, language=language, unpaper=unpaper),
+            sorted(tmpdir.glob("*.ppm"), key=parse_page_number),
         )
         merger = PdfMerger()
         console.log("Merging pages")
