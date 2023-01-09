@@ -30,9 +30,9 @@ def worker(src: Path, *, language: str, unpaper: bool) -> Path:
     return src.with_suffix(".ocr.pdf")
 
 
-def parse_page_number(p: Path) -> int:
+def parse_page_number(p: Path, *, prefix="page-", suffix=".ppm") -> int:
     s = str(p)
-    return int(s[s.rindex("page") + len("page") :].removesuffix(".pdf"))
+    return int(s[s.rindex(prefix) + len(prefix) :].removesuffix(suffix))
 
 
 def main(
